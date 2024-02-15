@@ -27,29 +27,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <rosdyn_ik_solver/rosdyn_ik_solver.h>
-#include <pluginlib/class_list_macros.h>
+#if ROS_VERSION == 1
+  #include <pluginlib/class_list_macros.h>
+  #define DEBUG(s) ROS_DEBUG_STREAM(s)
+#elif ROS_VERSION == 2
+  #include <pluginlib/class_list_macros.hpp>
+  #define DEBUG(s) RCLCPP_DEBUG_STREAM(rclcpp::get_logger("RosdynIkSolver"), s)
+#endif
 
 PLUGINLIB_EXPORT_CLASS(ik_solver::RosdynIkSolver, ik_solver::IkSolver)
 
 namespace ik_solver
 {
-
-inline bool RosdynIkSolver::customConfig()
+inline bool RosdynIkSolver::config(const std::string& params_ns)
 {
+  IkSolver::config(params_ns);
   Eigen::Vector3d gravity;
   gravity << 0,0,-9.806;
-  chain_ = rosdyn::createChain(model_,base_frame_,flange_frame_,gravity);
-  return chain_->setInputJointsName(joint_names_);
-
+  chain_ = rdyn::createChain(*model_,base_frame_,flange_frame_,gravity);
+  std::string what;
+  return chain_->setInputJointsName(joint_names_, what);
 }
 
 
-std::vector<Eigen::VectorXd> RosdynIkSolver::getIk(const Eigen::Affine3d& T_base_flange,
-                                                   const std::vector<Eigen::VectorXd> & seeds,
-                                                   const int& desired_solutions,
-                                                   const int& max_stall_iterations)
+Solutions RosdynIkSolver::getIk(const Eigen::Affine3d& T_base_flange,
+                                const Configurations & seeds,
+                                const int& desired_solutions,
+                                const int& min_stall_iterations,
+                                const int& max_stall_iterations)
 {
-  std::vector<Eigen::VectorXd > solutions;
+  Solutions solutions;
 
   unsigned int n_seed = seeds.size();
   bool found = false;
@@ -65,15 +72,15 @@ std::vector<Eigen::VectorXd> RosdynIkSolver::getIk(const Eigen::Affine3d& T_base
   {
     if (stall>max_stall_iterations)
     {
-      if (solutions.size()==0)
-        ROS_DEBUG("reach stall generations without any solution");
+      if (solutions.configurations().size()==0)
+        DEBUG("reach stall generations without any solution");
       else
-        ROS_DEBUG("reach stall generation (iteration %u)",iter);
+        DEBUG("reach stall generation (iteration " << iter << ")");
       break;
     }
-    if (solutions.size()>desired_solutions)
+    if (solutions.configurations().size()>desired_solutions)
     {
-      ROS_DEBUG("reach desired solutions number");
+      DEBUG("reach desired solutions number");
       break;
     }
     Eigen::VectorXd js;
@@ -89,20 +96,20 @@ std::vector<Eigen::VectorXd> RosdynIkSolver::getIk(const Eigen::Affine3d& T_base
     {
       start=center+width.cwiseProduct(r);
     }
-
-    if (outOfBound(start))
+    std::vector<int> out_of_bound = outOfBound(start, ub_, lb_);
+    if (std::find(out_of_bound.begin(), out_of_bound.end(), 0) != out_of_bound.end())
       continue;
 
     stall++;
 
-    if (chain_->computeLocalIk(js,T_base_flange,start,1e-6,ros::Duration(0.005)))
+    if (chain_->computeLocalIk(js,T_base_flange,start,1e-6, 0.005))
     {
-
-      if (outOfBound(js))
+      out_of_bound = outOfBound(js, ub_, lb_);
+      if (std::find(out_of_bound.begin(), out_of_bound.end(), 0) != out_of_bound.end())
         continue;
       bool is_diff = true;
 
-      for (const Eigen::VectorXd& sol: solutions)
+      for (const Eigen::VectorXd& sol: solutions.configurations())
       {
         if ((sol-js).norm()<TOLERANCE)
         {
@@ -117,11 +124,12 @@ std::vector<Eigen::VectorXd> RosdynIkSolver::getIk(const Eigen::Affine3d& T_base
       std::vector<Eigen::VectorXd> multiturn = chain_->getMultiplicity(js);
       for (const Eigen::VectorXd& tmp: multiturn)
       {
-        if (outOfBound(tmp))
+        out_of_bound = outOfBound(tmp, ub_, lb_);
+        if (std::find(out_of_bound.begin(), out_of_bound.end(), 0) != out_of_bound.end())
           continue;
 
         is_diff = true;
-        for (const Eigen::VectorXd& sol: solutions)
+        for (const Eigen::VectorXd& sol: solutions.configurations())
         {
           if ((sol-tmp).norm()<TOLERANCE)
           {
@@ -132,15 +140,24 @@ std::vector<Eigen::VectorXd> RosdynIkSolver::getIk(const Eigen::Affine3d& T_base
         if (not is_diff)
           continue;
 
-        solutions.push_back(tmp);
+        solutions.configurations().push_back(tmp);
+        Eigen::Affine3d Tfk = chain_->getTransformation(tmp);
+        solutions.translation_residuals().push_back((Tfk.translation() - T_base_flange.translation()).norm());
+        solutions.rotation_residuals().push_back(Eigen::AngleAxisd(T_base_flange.linear().inverse() * Tfk.linear()).angle());
       }
       found = true;
-
 
     }
   }
 
+  solutions.message() = "Solution found: " + std::to_string(found? "True":"False") + ". Iterations: " + std::to_string(iter+1) + " (" + std::to_string(min_stall_iter_) + " - " + std::to_string(max_stall_iter_) + "). Seeds: " + std::to_string(n_seed);
+
   return solutions;
+}
+
+Eigen::Affine3d RosdynIkSolver::getFK(const Configuration& s)
+{
+  return chain_->getTransformation(s);
 }
 
 

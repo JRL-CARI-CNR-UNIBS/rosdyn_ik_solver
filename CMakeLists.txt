@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(rosdyn_ik_solver)
 
-set(CMAKE_BUILD_TYPE Debug)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()

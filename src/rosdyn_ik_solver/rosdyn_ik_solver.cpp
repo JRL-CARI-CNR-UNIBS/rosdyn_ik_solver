@@ -30,9 +30,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #if ROS_VERSION == 1
   #include <pluginlib/class_list_macros.h>
   #define DEBUG(s) ROS_DEBUG_STREAM(s)
+  #define WARN(s) ROS_WARN_STREAM(s)
 #elif ROS_VERSION == 2
   #include <pluginlib/class_list_macros.hpp>
   #define DEBUG(s) RCLCPP_DEBUG_STREAM(rclcpp::get_logger("RosdynIkSolver"), s)
+  #define WARN(s) RCLCPP_WARN_STREAM(rclcpp::get_logger("RosdynIkSolver"), s)
 #endif
 
 PLUGINLIB_EXPORT_CLASS(ik_solver::RosdynIkSolver, ik_solver::IkSolver)
@@ -41,7 +43,11 @@ namespace ik_solver
 {
 inline bool RosdynIkSolver::config(const std::string& params_ns)
 {
-  IkSolver::config(params_ns);
+  if(!IkSolver::config(params_ns))
+  {
+    WARN("Ik solver initial config FAILED");
+    return false;
+  }
   Eigen::Vector3d gravity;
   gravity << 0,0,-9.806;
   chain_ = rdyn::createChain(*model_,base_frame_,flange_frame_,gravity);
@@ -57,11 +63,10 @@ Solutions RosdynIkSolver::getIk(const Eigen::Affine3d& T_base_flange,
                                 const int& max_stall_iterations)
 {
   Solutions solutions;
+  solutions.clear();
 
   unsigned int n_seed = seeds.size();
   bool found = false;
-
-
 
   Eigen::VectorXd center=(ub_+lb_)*0.5;
   Eigen::VectorXd width=(ub_-lb_)*0.5;
@@ -99,7 +104,6 @@ Solutions RosdynIkSolver::getIk(const Eigen::Affine3d& T_base_flange,
     std::vector<int> out_of_bound = outOfBound(start, ub_, lb_);
     if (std::find(out_of_bound.begin(), out_of_bound.end(), 0) != out_of_bound.end())
       continue;
-
     stall++;
 
     if (chain_->computeLocalIk(js,T_base_flange,start,1e-6, 0.005))

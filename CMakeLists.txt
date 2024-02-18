@@ -21,7 +21,7 @@ if(NOT((ROS_VERSION EQUAL 1) OR (ROS_VERSION EQUAL 2)))
 endif()
 
 if(ROS_VERSION EQUAL 1)
-  message("Building for ROS_VERSION == 1")
+  message("Building for ROS_VERSION_1")
   find_package(catkin REQUIRED COMPONENTS
     roscpp
     rosdyn_core
@@ -42,7 +42,7 @@ if(ROS_VERSION EQUAL 1)
     ${EIGEN3_INCLUDE_DIRS}
   )
 elseif(ROS_VERSION EQUAL 2)
-  message("Building for ROS_VERSION == 2")
+  message("Building for ROS_VERSION_2")
   find_package(ament_cmake REQUIRED)
   find_package(rclcpp REQUIRED)
   find_package(ik_solver REQUIRED)
@@ -59,6 +59,7 @@ endif()
 add_library(${PROJECT_NAME} SHARED
   src/${PROJECT_NAME}/rosdyn_ik_solver.cpp
 )
+target_compile_definitions(${PROJECT_NAME} PUBLIC -DROS_X=${ROS_VERSION})
 
 ##########
 ## LINK ##

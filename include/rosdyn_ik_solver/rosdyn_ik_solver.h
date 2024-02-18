@@ -34,17 +34,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ik_solver_core/ik_solver_base_class.h>
 #include <ik_solver/internal/utils.h>
 
-#ifdef ROS_VERSION
-  #if ROS_VERSION == 1
-    #include <ros/ros.h>
-    #include <rosdyn_core/primitives.h>
-    namespace ik_solver{
-      namespace rdyn = rosdyn;
-    }
-  #elif ROS_VERSION == 2
-    #include <rclcpp/rclcpp.hpp>
-    #include <rdyn_core/primitives.h>
-  #endif
+#if ROS_X == 1
+  #include <ros/ros.h>
+  #include <rosdyn_core/primitives.h>
+  namespace ik_solver{
+    namespace rdyn = rosdyn;
+  }
+#elif ROS_X == 2
+  #include <rclcpp/rclcpp.hpp>
+  #include <rdyn_core/primitives.h>
 #else
   #error "No ROS version defined"
 #endif

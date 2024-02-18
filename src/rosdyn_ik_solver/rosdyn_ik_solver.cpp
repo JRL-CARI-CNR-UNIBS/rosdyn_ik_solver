@@ -27,11 +27,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <rosdyn_ik_solver/rosdyn_ik_solver.h>
-#if ROS_VERSION == 1
+#if ROS_X == 1
   #include <pluginlib/class_list_macros.h>
   #define DEBUG(s) ROS_DEBUG_STREAM(s)
   #define WARN(s) ROS_WARN_STREAM(s)
-#elif ROS_VERSION == 2
+#elif ROS_X == 2
   #include <pluginlib/class_list_macros.hpp>
   #define DEBUG(s) RCLCPP_DEBUG_STREAM(rclcpp::get_logger("RosdynIkSolver"), s)
   #define WARN(s) RCLCPP_WARN_STREAM(rclcpp::get_logger("RosdynIkSolver"), s)

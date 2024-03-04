@@ -90,6 +90,9 @@ elseif(ROS_VERSION EQUAL 2)
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin)
+
+  install(DIRECTORY config
+    DESTINATION share/${PROJECT_NAME})
   ament_export_targets(export_${PROJECT_NAME})
   ament_export_dependencies(${PROJECT_NAME})
   ament_package()

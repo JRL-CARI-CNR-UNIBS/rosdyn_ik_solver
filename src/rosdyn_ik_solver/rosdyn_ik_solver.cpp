@@ -51,8 +51,12 @@ inline bool RosdynIkSolver::config(const std::string& params_ns)
   Eigen::Vector3d gravity;
   gravity << 0,0,-9.806;
   chain_ = rdyn::createChain(*model_,base_frame_,flange_frame_,gravity);
+#if ROS_X == 1
+  return chain_->setInputJointsName(joint_names_);
+#elif ROS_X == 2
   std::string what;
   return chain_->setInputJointsName(joint_names_, what);
+#endif
 }
 
 

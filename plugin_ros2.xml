@@ -1,7 +1,0 @@
-<library path="rosdyn_ik_solver">
-  <class type="ik_solver::RosdynIkSolver" base_class_type="ik_solver::IkSolver">
-    <description>
-      Rosdyn IK solver
-    </description>
-  </class>
-</library>

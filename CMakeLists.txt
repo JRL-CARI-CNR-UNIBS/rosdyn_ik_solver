@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(rosdyn_ik_solver)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -47,8 +47,6 @@ elseif(ROS_VERSION EQUAL 2)
   find_package(rclcpp REQUIRED)
   find_package(ik_solver REQUIRED)
   find_package(rdyn_core REQUIRED)
-  find_package(eigen_matrix_utils REQUIRED) # Until fix dependencies export on rdyn_core
-  find_package(kinematics_filters REQUIRED) # Until fix dependencies export on rdyn_core
   find_package(pluginlib REQUIRED)
 endif()
 
@@ -75,16 +73,14 @@ elseif(ROS_VERSION EQUAL 2)
     ik_solver
     pluginlib)
   target_link_libraries(${PROJECT_NAME} PUBLIC
-    rdyn_core
-    ${EIGEN3_LIBRARIES}
-    ${eigen_matrix_utils_LIBRARIES}
-    ${kinematics_filters_LIBRARIES})
+    rdyn_core::rdyn_core
+    Eigen3::Eigen)
   target_include_directories(${PROJECT_NAME} PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
     )
 
-  pluginlib_export_plugin_description_file(ik_solver plugin_ros2.xml)
+  pluginlib_export_plugin_description_file(ik_solver plugin2.xml)
   install(TARGETS ${PROJECT_NAME}
     EXPORT export_${PROJECT_NAME}
     LIBRARY DESTINATION lib

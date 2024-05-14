@@ -25,6 +25,6 @@
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <build_type condition="$ROS_VERSION == 2">ament_cmake</build_type>
-    <ik_solver plugin="${prefix}/plugin.xml"/> <!-- ROS1 -->
+    <ik_solver plugin="${prefix}/plugin1.xml"/> <!-- ROS1 -->
   </export>
 </package>

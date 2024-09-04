@@ -1,0 +1,15 @@
+rosdyn_ik_solver:
+  type: ik_solver::RosdynIkSolver
+  base_frame: structure_base_link # base frame of the chain
+  flange_frame: kuka_sensor # end frame of the chain
+
+  tool_frame: kuka_sensor # destination frame of the IK (it should be rigid attached to flange_frame)
+  desired_solutions: 32 # number of desired solution
+  joint_names:
+  - structure_joint_1
+  - kuka_joint1
+  - kuka_joint2
+  - kuka_joint3
+  - kuka_joint4
+  - kuka_joint5
+  - kuka_joint6

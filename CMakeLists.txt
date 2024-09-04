@@ -1,49 +1,95 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.8)
 project(rosdyn_ik_solver)
-
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(ik_solver_core REQUIRED)
 
-find_package(catkin REQUIRED COMPONENTS
-  eigen_conversions
-  ik_solver_msgs
-  roscpp
-  rosdyn_core
-  tf_conversions
-  ik_solver
+set(ROS_VERSION $ENV{ROS_VERSION})
+if(ROS_VERSION STREQUAL "")
+  message(FATAL_ERROR "No supported version of ROS found!")
+endif()
+if(NOT((ROS_VERSION EQUAL 1) OR (ROS_VERSION EQUAL 2)))
+  message(FATAL_ERROR "No supported version of ROS found!")
+endif()
+
+if(ROS_VERSION EQUAL 1)
+  message("Building for ROS_VERSION_1")
+  find_package(catkin REQUIRED COMPONENTS
+    roscpp
+    rosdyn_core
+    ik_solver
+    pluginlib
+  )
+
+  catkin_package(
+    INCLUDE_DIRS include
+    LIBRARIES ${PROJECT_NAME}
+    CATKIN_DEPENDS roscpp rosdyn_core ik_solver pluginlib
+  #  DEPENDS system_lib
+  )
+
+  include_directories(
+    include
+    ${catkin_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIRS}
+  )
+elseif(ROS_VERSION EQUAL 2)
+  message("Building for ROS_VERSION_2")
+  find_package(ament_cmake REQUIRED)
+  find_package(rclcpp REQUIRED)
+  find_package(ik_solver REQUIRED)
+  find_package(rdyn_core REQUIRED)
+  find_package(pluginlib REQUIRED)
+endif()
+
+#############
+## TARGETS ##
+#############
+
+add_library(${PROJECT_NAME} SHARED
+  src/${PROJECT_NAME}/rosdyn_ik_solver.cpp
 )
+target_compile_definitions(${PROJECT_NAME} PUBLIC -DROS_X=${ROS_VERSION})
 
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES rosdyn_ik_solver
-  CATKIN_DEPENDS eigen_conversions ik_solver_msgs roscpp rosdyn_core tf_conversions ik_solver
-#  DEPENDS system_lib
-)
+##########
+## LINK ##
+##########
 
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIRS}
-)
+if(ROS_VERSION EQUAL 1)
+  add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
- add_library(${PROJECT_NAME}
-   src/${PROJECT_NAME}/rosdyn_ik_solver.cpp
- )
- add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+elseif(ROS_VERSION EQUAL 2)
 
-# add_executable(${PROJECT_NAME}_node src/node.cpp)
-# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME rosdyn_ik PREFIX "")
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  ament_target_dependencies(${PROJECT_NAME} PUBLIC
+    rclcpp
+    ik_solver
+    pluginlib)
+  target_link_libraries(${PROJECT_NAME} PUBLIC
+    rdyn_core::rdyn_core
+    Eigen3::Eigen)
+  target_include_directories(${PROJECT_NAME} PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+    )
 
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${PROJECT_NAME}
-#   ${catkin_LIBRARIES}
-# )
+  pluginlib_export_plugin_description_file(ik_solver plugin2.xml)
+  install(TARGETS ${PROJECT_NAME}
+    EXPORT export_${PROJECT_NAME}
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin)
+
+  install(DIRECTORY config
+    DESTINATION share/${PROJECT_NAME})
+  ament_export_targets(export_${PROJECT_NAME})
+  ament_export_dependencies(${PROJECT_NAME})
+  ament_package()
+endif()

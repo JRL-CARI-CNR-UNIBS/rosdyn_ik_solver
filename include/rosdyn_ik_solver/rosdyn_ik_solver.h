@@ -28,15 +28,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <ros/ros.h>
-#include <tf/transform_listener.h>
+#include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <rosdyn_core/primitives.h>
-#include <ik_solver_msgs/GetIk.h>
-#include <ik_solver_msgs/GetIkArray.h>
-#include <tf_conversions/tf_eigen.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <ik_solver/ik_solver_base_class.h>
+
+#include <ik_solver/ik_solver.hpp>
+#include <ik_solver/internal/utils.h>
+
+#if ROS_X == 1
+  #include <ros/ros.h>
+  #include <rosdyn_core/primitives.h>
+  namespace ik_solver{
+    namespace rdyn = rosdyn;
+  }
+#elif ROS_X == 2
+  #include <rclcpp/rclcpp.hpp>
+  #include <rdyn_core/primitives.h>
+#else
+  #error "No ROS version defined"
+#endif
 
 #define TOLERANCE 1e-3
 namespace ik_solver
@@ -44,13 +53,17 @@ namespace ik_solver
 class RosdynIkSolver: public IkSolver
 {
 public:
-  virtual std::vector<Eigen::VectorXd> getIk(const Eigen::Affine3d& T_base_flange,
-                                     const std::vector<Eigen::VectorXd> & seeds,
-                                     const int& desired_solutions,
-                                     const int& max_stall_iterations) override;
+  virtual Solutions getIk(const Eigen::Affine3d& T_base_flange,
+                          const Configurations & seeds,
+                          const int& desired_solutions,
+                          const int& min_stall_iterations,
+                          const int& max_stall_iterations) override;
+
+  virtual Eigen::Affine3d getFK(const Configuration& s) override;
+
 protected:
-  rosdyn::ChainPtr chain_;
-  virtual bool customConfig() override;
+  rdyn::ChainPtr chain_;
+  virtual bool config(const std::string& param_ns = "") override;
 
 };
 }  //  namespace ik_solver

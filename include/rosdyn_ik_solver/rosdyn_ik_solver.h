@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <ik_solver_core/ik_solver_base_class.h>
+#include <ik_solver/ik_solver.hpp>
 #include <ik_solver/internal/utils.h>
 
 #if ROS_X == 1
